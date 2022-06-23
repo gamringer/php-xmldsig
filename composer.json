@@ -1,0 +1,23 @@
+{
+    "name": "gamringer/xmldsig",
+    "description": "A PHP library for XML digital signature",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Guillaume Amringer",
+            "email": "g.amringer@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "gamringer\\xmldsig\\": "src/"
+        }
+    }
+}
