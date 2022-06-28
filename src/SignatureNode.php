@@ -8,6 +8,7 @@ class SignatureNode
 	protected $signedInfoNode;
 	protected $idReferences = [];
 	protected $canonicalizationMethod = CanonicalizationMethod::METHOD_1_0;
+	protected $preferredDigestMethod = null;
 
 	public function __construct(\DOMElement $node)
 	{
@@ -35,7 +36,25 @@ class SignatureNode
 		$this->idReferences[] = $id;
 	}
 
-	private function calculateReferences(string $digestMethod = 'sha256'): void
+	public function setPreferredDigestMethod(string $digestMethod): void
+	{
+		if (!in_array($digestMethod, ['sha256', 'sha384', 'sha512'])) {
+			throw new \Exception('Unsupported digest method');
+		}
+
+		$this->preferredDigestMethod = $digestMethod;
+	}
+
+	private function getDigestAlgorithmIdentifier(string $digestMethod): string
+	{
+		return [
+			'sha256' => 'http://www.w3.org/2001/04/xmlenc#sha256',
+			'sha384' => 'http://www.w3.org/2001/04/xmldsig-more#sha384',
+			'sha512' => 'http://www.w3.org/2001/04/xmlenc#sha512',
+		][$digestMethod];
+	}
+
+	private function calculateReferences(string $digestMethod): void
 	{
 		if (empty($this->idReferences)) {
 			$this->calculateEmptyReference($digestMethod);
@@ -44,16 +63,18 @@ class SignatureNode
 
 		foreach ($this->idReferences as $idReference) {
 			$node = $this->node->ownerDocument->getElementById($idReference);
-			$digestData = $node->C14N(true, false);
+			$digestData = $this->canonicalize($node);
 
 			$referenceNode = $this->node->ownerDocument->createElement('Reference');
 			$referenceNode->setAttribute('URI', '#' . $idReference);
 
+			$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
+
 			$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
-			$digestMethodNode->setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmlenc#sha256');
+			$digestMethodNode->setAttribute('Algorithm', $digestAlgorithmIdentifier);
 			$referenceNode->appendChild($digestMethodNode);
 
-			$digestValue = hash('sha256', $digestData, true);
+			$digestValue = hash($digestMethod, $digestData, true);
 
 			$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
 			$referenceNode->appendChild($digestValueNode);
@@ -66,7 +87,7 @@ class SignatureNode
 	{
 		$rootNodeName = $this->node->ownerDocument->documentElement->nodeName;
 
-		$digestData = $this->node->ownerDocument->documentElement->C14N(true, false);
+		$digestData = $this->canonicalize($this->node->ownerDocument->documentElement);
 
 		$referenceNode = $this->node->ownerDocument->createElement('Reference');
 		$referenceNode->setAttribute('URI', '');
@@ -93,6 +114,10 @@ class SignatureNode
 
 	private function getDigestMethod(string $signatureMethod): string
 	{
+		if (isset($this->preferredDigestMethod)) {
+			return $this->preferredDigestMethod;
+		}
+
 		return [
 			'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256' => 'sha256',
 			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256' => 'sha256',
@@ -117,22 +142,22 @@ class SignatureNode
 
 		$this->node->ownerDocument->documentElement->appendChild($this->node);
 
-		return $this->canonicalize();
+		return $this->canonicalize($this->signedInfoNode);
 	}
 
-	protected function canonicalize(): string
+	protected function canonicalize(\DOMNode $node): string
 	{
 		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_1_0) {
-			return $this->signedInfoNode->C14N(false, false);
+			return $node->C14N(false, false);
 		}
 		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_1_0_WITH_COMMENTS) {
-			return $this->signedInfoNode->C14N(false, true);
+			return $node->C14N(false, true);
 		}
 		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_EXCLUSIVE_1_0) {
-			return $this->signedInfoNode->C14N(true, false);
+			return $node->C14N(true, false);
 		}
 		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_EXCLUSIVE_1_0_WITH_COMMENTS) {
-			return $this->signedInfoNode->C14N(true, true);
+			return $node->C14N(true, true);
 		}
 
 		throw new \Exception('Unsupported canonicalization method');
