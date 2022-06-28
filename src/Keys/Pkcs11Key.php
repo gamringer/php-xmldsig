@@ -2,13 +2,9 @@
 
 namespace gamringer\xmldsig\Keys;
 
-use gamringer\xmldsig\SignatureNode;
-
-class Pkcs11Key
+class Pkcs11Key extends AbstractKey implements signsXml
 {
 	protected $keyObject;
-	protected $cert;
-	protected $chain;
 
 	public function __construct(\Pkcs11\Key $keyObject)
 	{
@@ -22,30 +18,35 @@ class Pkcs11Key
 		return new self($privateKeySearchResult[0]);
 	}
 
-	public function setCertificate(string $cert, array $chain = []): void
+	protected function signData(string $data): string
 	{
-		$this->cert = $this->stripPem($cert);
-		$this->chain = [];
-		foreach ($chain as $element) {
-			$this->chain[] = $this->stripPem($element);
-		}
-	}
-
-	private function stripPem(string $pem): string
-	{
-		$begin = strpos($pem, '-----BEGIN CERTIFICATE-----') + 28;
-		$end = strpos($pem, '-----END CERTIFICATE-----') - 1;
-		return str_replace("\n", '', substr($pem, $begin, $end - $begin));
-	}
-
-	public function sign(SignatureNode $dsigNode): void
-	{
-		$method = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
-		$data = $dsigNode->getSignatureData($method);
-
 		$mechanism = new \Pkcs11\Mechanism(\Pkcs11\CKM_SHA256_RSA_PKCS);
 		$signature = $this->keyObject->sign($mechanism, $data);
 
-		$dsigNode->setSignature(base64_encode($signature), $this->cert, $this->chain);
+		return $signature;
+	}
+
+	protected function getSigningMethod(): string
+	{
+		$keyType = $this->keyObject->getAttributeValue([\Pkcs11\CKA_KEY_TYPE])[\Pkcs11\CKA_KEY_TYPE];
+
+		if ($keyType == \Pkcs11\CKK_RSA) {
+			return 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+		}
+
+		if ($keyTypeValues == \Pkcs11\CKK_ECDSA) {
+			$ecParams = bin2hex($this->keyObject->getAttributeValue([\Pkcs11\CKA_EC_PARAMS])[\Pkcs11\CKA_EC_PARAMS]);
+			if ($ecParams == '06082A8648CE3D030107') {
+				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
+			}
+			if ($ecParams == '06052B81040022') {
+				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384';
+			}
+			if ($ecParams == '06052B81040023') {
+				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512';
+			}
+		}
+
+		throw new \Exception('Unknown key type');
 	}
 }

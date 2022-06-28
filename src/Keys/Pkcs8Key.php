@@ -2,13 +2,9 @@
 
 namespace gamringer\xmldsig\Keys;
 
-use gamringer\xmldsig\SignatureNode;
-
-class Pkcs8Key
+class Pkcs8Key extends AbstractKey implements signsXml
 {
 	protected $pkey;
-	protected $cert;
-	protected $chain;
 
 	public function __construct(string $encoded, ?string $password = null)
 	{
@@ -20,29 +16,32 @@ class Pkcs8Key
 		return new self(file_get_contents($path), $password);
 	}
 
-	public function setCertificate(string $cert, array $chain = []): void
+	protected function signData(string $data): string
 	{
-		$this->cert = $this->stripPem($cert);
-		$this->chain = [];
-		foreach ($chain as $element) {
-			$this->chain[] = $this->stripPem($element);
-		}
-	}
-
-	private function stripPem(string $pem): string
-	{
-		$begin = strpos($pem, '-----BEGIN CERTIFICATE-----') + 28;
-		$end = strpos($pem, '-----END CERTIFICATE-----') - 1;
-		return str_replace("\n", '', substr($pem, $begin, $end - $begin));
-	}
-
-	public function sign(SignatureNode $dsigNode): void
-	{
-		$method = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
-		$data = $dsigNode->getSignatureData($method);
-
 		openssl_sign($data, $signature, $this->pkey, \OPENSSL_ALGO_SHA256);
 
-		$dsigNode->setSignature(base64_encode($signature), $this->cert, $this->chain);
+		return $signature;
+	}
+
+	protected function getSigningMethod(): string
+	{
+		$details = openssl_pkey_get_details($this->pkey);
+		if ($details['type'] ==  \OPENSSL_KEYTYPE_RSA) {
+			return 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+		}
+
+		if ($details['type'] ==  \OPENSSL_KEYTYPE_EC) {
+			if ($details['curve_name'] ==  'prime256v1 ') {
+				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
+			}
+			if ($details['curve_name'] ==  'secp384r1 ') {
+				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384';
+			}
+			if ($details['curve_name'] ==  'secp521r1 ') {
+				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512';
+			}
+		}
+
+		throw new \Exception('Unknown key type');
 	}
 }

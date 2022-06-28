@@ -6,40 +6,63 @@ class SignatureNode
 {
 	protected $node;
 	protected $signedInfoNode;
-	protected $references = [];
+	protected $idReferences = [];
+	protected $canonicalizationMethod = CanonicalizationMethod::METHOD_1_0;
 
 	public function __construct(\DOMElement $node)
 	{
 		$this->node = $node;
 		$this->signedInfoNode = $node->ownerDocument->createElement('SignedInfo');
 		$this->node->appendChild($this->signedInfoNode);
-
-		$canonicalizationMethodNode = $node->ownerDocument->createElement('CanonicalizationMethod');
-		$canonicalizationMethodNode->setAttribute('Algorithm', 'http://www.w3.org/2001/10/xml-exc-c14n#');
-		$this->signedInfoNode->appendChild($canonicalizationMethodNode);
 	}
 
-	public function addIdReference(string $id, string $digestMethod = 'sha256'): void
+	public function setCanonicalizationMethod(string $canonicalizationMethod): void
 	{
-		$node = $this->node->ownerDocument->getElementById($id);
-		$digestData = $node->C14N(true, false);
+		if (!in_array($canonicalizationMethod, [
+			CanonicalizationMethod::METHOD_1_0,
+			CanonicalizationMethod::METHOD_1_0_WITH_COMMENTS,
+			CanonicalizationMethod::METHOD_EXCLUSIVE_1_0,
+			CanonicalizationMethod::METHOD_EXCLUSIVE_1_0_WITH_COMMENTS,
+		])) {
+			throw new \Exception('Unsupported canonicalization method');
+		}
 
-		$referenceNode = $this->node->ownerDocument->createElement('Reference');
-		$referenceNode->setAttribute('URI', '#' . $id);
-
-		$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
-		$digestMethodNode->setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmlenc#sha256');
-		$referenceNode->appendChild($digestMethodNode);
-
-		$digestValue = hash('sha256', $digestData, true);
-
-		$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
-		$referenceNode->appendChild($digestValueNode);
-
-		$this->references[] = $referenceNode;
+		$this->canonicalizationMethod = $canonicalizationMethod;
 	}
 
-	private function addEmptyReference(string $digestMethod = 'sha256'): void
+	public function addIdReference(string $id): void
+	{
+		$this->idReferences[] = $id;
+	}
+
+	private function calculateReferences(string $digestMethod = 'sha256'): void
+	{
+		if (empty($this->idReferences)) {
+			$this->calculateEmptyReference($digestMethod);
+			return;
+		}
+
+		foreach ($this->idReferences as $idReference) {
+			$node = $this->node->ownerDocument->getElementById($idReference);
+			$digestData = $node->C14N(true, false);
+
+			$referenceNode = $this->node->ownerDocument->createElement('Reference');
+			$referenceNode->setAttribute('URI', '#' . $idReference);
+
+			$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
+			$digestMethodNode->setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmlenc#sha256');
+			$referenceNode->appendChild($digestMethodNode);
+
+			$digestValue = hash('sha256', $digestData, true);
+
+			$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
+			$referenceNode->appendChild($digestValueNode);
+
+			$this->signedInfoNode->appendChild($referenceNode);
+		}
+	}
+
+	private function calculateEmptyReference(string $digestMethod): void
 	{
 		$rootNodeName = $this->node->ownerDocument->documentElement->nodeName;
 
@@ -64,25 +87,55 @@ class SignatureNode
 
 		$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
 		$referenceNode->appendChild($digestValueNode);
+
+		$this->signedInfoNode->appendChild($referenceNode);
 	}
 
-	public function getSignatureData(string $method): string
+	private function getDigestMethod(string $signatureMethod): string
 	{
+		return [
+			'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256' => 'sha256',
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256' => 'sha256',
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384' => 'sha384',
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512' => 'sha512',
+		][$signatureMethod];
+	}
+
+	public function getSignatureData(string $signatureMethod): string
+	{
+		$canonicalizationMethodNode = $this->node->ownerDocument->createElement('CanonicalizationMethod');
+		$canonicalizationMethodNode->setAttribute('Algorithm', $this->canonicalizationMethod);
+		$this->signedInfoNode->appendChild($canonicalizationMethodNode);
+
 		$signatureMethodNode = $this->node->ownerDocument->createElement('SignatureMethod');
-		$signatureMethodNode->setAttribute('Algorithm', $method);
+		$signatureMethodNode->setAttribute('Algorithm', $signatureMethod);
 		$this->signedInfoNode->appendChild($signatureMethodNode);
 
-		if (empty($this->references)) {
-			$this->addEmptyReference();
-		}
+		$digestMethod = $this->getDigestMethod($signatureMethod);
 
-		foreach ($this->references as $referenceNode) {
-			$this->signedInfoNode->appendChild($referenceNode);
-		}
+		$this->calculateReferences($digestMethod);
 
 		$this->node->ownerDocument->documentElement->appendChild($this->node);
 
-		return $this->signedInfoNode->C14N(true, false);
+		return $this->canonicalize();
+	}
+
+	protected function canonicalize(): string
+	{
+		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_1_0) {
+			return $this->signedInfoNode->C14N(false, false);
+		}
+		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_1_0_WITH_COMMENTS) {
+			return $this->signedInfoNode->C14N(false, true);
+		}
+		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_EXCLUSIVE_1_0) {
+			return $this->signedInfoNode->C14N(true, false);
+		}
+		if ($this->canonicalizationMethod == CanonicalizationMethod::METHOD_EXCLUSIVE_1_0_WITH_COMMENTS) {
+			return $this->signedInfoNode->C14N(true, true);
+		}
+
+		throw new \Exception('Unsupported canonicalization method');
 	}
 
 	public function setSignature(string $value, ?string $cert = null, array $chain = [])
