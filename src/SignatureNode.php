@@ -6,7 +6,9 @@ class SignatureNode
 {
 	protected $node;
 	protected $signedInfoNode;
+	protected $objectNode;
 	protected $idReferences = [];
+	protected $signaturePropertyNodes = [];
 	protected $canonicalizationMethod = CanonicalizationMethod::METHOD_1_0;
 	protected $preferredDigestMethod = null;
 
@@ -62,25 +64,35 @@ class SignatureNode
 		}
 
 		foreach ($this->idReferences as $idReference) {
-			$node = $this->node->ownerDocument->getElementById($idReference);
-			$digestData = $this->canonicalize($node);
-
-			$referenceNode = $this->node->ownerDocument->createElement('Reference');
-			$referenceNode->setAttribute('URI', '#' . $idReference);
-
-			$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
-
-			$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
-			$digestMethodNode->setAttribute('Algorithm', $digestAlgorithmIdentifier);
-			$referenceNode->appendChild($digestMethodNode);
-
-			$digestValue = hash($digestMethod, $digestData, true);
-
-			$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
-			$referenceNode->appendChild($digestValueNode);
-
-			$this->signedInfoNode->appendChild($referenceNode);
+			$this->calculateIdReference($idReference, $digestMethod);
 		}
+	}
+
+	private function calculateIdReference($id, string $digestMethod): void
+	{
+		$node = $this->node->ownerDocument->getElementById($id);
+		$digestData = $this->canonicalize($node);
+
+		$referenceNode = $this->node->ownerDocument->createElement('Reference');
+		$referenceNode->setAttribute('URI', '#' . $id);
+		$this->signedInfoNode->appendChild($referenceNode);
+
+		$transformsNode = $this->node->ownerDocument->createElement('Transforms');
+		$referenceNode->appendChild($transformsNode);
+
+		$transformNode = $this->node->ownerDocument->createElement('Transform');
+		$transformNode->setAttribute('Algorithm', $this->canonicalizationMethod);
+		$transformsNode->appendChild($transformNode);
+
+		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
+		$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
+		$digestMethodNode->setAttribute('Algorithm', $digestAlgorithmIdentifier);
+		$referenceNode->appendChild($digestMethodNode);
+
+		$digestValue = hash($digestMethod, $digestData, true);
+
+		$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
+		$referenceNode->appendChild($digestValueNode);
 	}
 
 	private function calculateEmptyReference(string $digestMethod): void
@@ -100,8 +112,13 @@ class SignatureNode
 		$transformNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
 		$transformsNode->appendChild($transformNode);
 
+		$transformNode = $this->node->ownerDocument->createElement('Transform');
+		$transformNode->setAttribute('Algorithm', $this->canonicalizationMethod);
+		$transformsNode->appendChild($transformNode);
+
+		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
 		$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
-		$digestMethodNode->setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmlenc#sha256');
+		$digestMethodNode->setAttribute('Algorithm', $digestAlgorithmIdentifier);
 		$referenceNode->appendChild($digestMethodNode);
 
 		$digestValue = hash('sha256', $digestData, true);
@@ -139,6 +156,7 @@ class SignatureNode
 		$digestMethod = $this->getDigestMethod($signatureMethod);
 
 		$this->calculateReferences($digestMethod);
+		$this->addObjectElements();
 
 		$this->node->ownerDocument->documentElement->appendChild($this->node);
 
@@ -165,6 +183,10 @@ class SignatureNode
 
 	public function setSignature(string $value, ?string $cert = null, array $chain = [])
 	{
+		if (isset($this->objectNode)) {
+			$this->node->removeChild($this->objectNode);
+		}
+
 		$signatureValueNode = $this->node->ownerDocument->createElement('SignatureValue', $value);
 		$this->node->appendChild($signatureValueNode);
 
@@ -182,6 +204,38 @@ class SignatureNode
 				$x509CertificateNode = $this->node->ownerDocument->createElement('X509Certificate', $element);
 				$x509DataNode->appendChild($x509CertificateNode);
 			}
+		}
+
+		if (isset($this->objectNode)) {
+			$this->node->appendChild($this->objectNode);
+		}
+	}
+
+	public function addSignatureProperty(string $id): \DOMElement
+	{
+		$node = $this->node->ownerDocument->createElement('SignatureProperty');
+		$node->setAttribute('Id', $id);
+		$node->setAttribute('Target', '#' . $this->node->getAttribute('Id'));
+
+		$this->signaturePropertyNodes[] = $node;
+
+		return $node;
+	}
+
+	private function addObjectElements(): void
+	{
+		$this->objectNode = $this->node->ownerDocument->createElement('Object');
+
+		if (!empty($this->signaturePropertyNodes)) {
+			$signaturePropertiesNode = $this->node->ownerDocument->createElement('SignatureProperties');
+			$this->objectNode->appendChild($signaturePropertiesNode);
+			foreach ($this->signaturePropertyNodes as $signaturePropertyNode) {
+				$signaturePropertiesNode->appendChild($signaturePropertyNode);
+			}
+		}
+
+		if ($this->objectNode->childNodes->count() > 0) {
+			$this->node->appendChild($this->objectNode);
 		}
 	}
 }
