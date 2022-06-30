@@ -95,6 +95,33 @@ class SignatureNode
 		$referenceNode->appendChild($digestValueNode);
 	}
 
+	private function calculateNodeReference(\DOMElement $node, string $digestMethod): void
+	{
+		$id = $node->getAttribute('Id');
+		$digestData = $this->canonicalize($node);
+
+		$referenceNode = $this->node->ownerDocument->createElement('Reference');
+		$referenceNode->setAttribute('URI', '#' . $id);
+		$this->signedInfoNode->appendChild($referenceNode);
+
+		$transformsNode = $this->node->ownerDocument->createElement('Transforms');
+		$referenceNode->appendChild($transformsNode);
+
+		$transformNode = $this->node->ownerDocument->createElement('Transform');
+		$transformNode->setAttribute('Algorithm', $this->canonicalizationMethod);
+		$transformsNode->appendChild($transformNode);
+
+		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
+		$digestMethodNode = $this->node->ownerDocument->createElement('DigestMethod');
+		$digestMethodNode->setAttribute('Algorithm', $digestAlgorithmIdentifier);
+		$referenceNode->appendChild($digestMethodNode);
+
+		$digestValue = hash($digestMethod, $digestData, true);
+
+		$digestValueNode = $this->node->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
+		$referenceNode->appendChild($digestValueNode);
+	}
+
 	private function calculateEmptyReference(string $digestMethod): void
 	{
 		$rootNodeName = $this->node->ownerDocument->documentElement->nodeName;
@@ -156,9 +183,11 @@ class SignatureNode
 		$digestMethod = $this->getDigestMethod($signatureMethod);
 
 		$this->calculateReferences($digestMethod);
-		$this->addObjectElements();
 
 		$this->node->ownerDocument->documentElement->appendChild($this->node);
+
+		$this->addObjectElements();
+		$this->addObjectReferences($digestMethod);
 
 		return $this->canonicalize($this->signedInfoNode);
 	}
@@ -220,6 +249,15 @@ class SignatureNode
 		$this->signaturePropertyNodes[] = $node;
 
 		return $node;
+	}
+
+	private function addObjectReferences(string $digestMethod): void
+	{
+		if (!empty($this->signaturePropertyNodes)) {
+			foreach ($this->signaturePropertyNodes as $signaturePropertyNode) {
+				$this->calculateNodeReference($signaturePropertyNode, $digestMethod);
+			}
+		}
 	}
 
 	private function addObjectElements(): void
