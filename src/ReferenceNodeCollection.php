@@ -6,6 +6,7 @@ class ReferenceNodeCollection
 {
 	protected $parentNode;
 	protected $idReferences = [];
+	protected $externalReferences = [];
 
 	public function __construct(\DOMElement $parentNode, Canonicalizer $canonicalizer)
 	{
@@ -16,6 +17,14 @@ class ReferenceNodeCollection
 	public function addIdReference(string $id): void
 	{
 		$this->idReferences[] = $id;
+	}
+
+	public function addExternalReference(string $uri, string $digestMethod, string $digestValue): void
+	{
+		$this->externalReferences[$uri] = [
+			'method' => $digestMethod,
+			'value' => $digestValue,
+		];
 	}
 
 	private function getDigestAlgorithmIdentifier(string $digestMethod): string
@@ -37,6 +46,25 @@ class ReferenceNodeCollection
 		foreach ($this->idReferences as $idReference) {
 			$this->calculateIdReference($idReference, $digestMethod);
 		}
+
+		foreach ($this->externalReferences as $uri => $digestInfo) {
+			$this->appendExternalReference($uri, $digestInfo);
+		}
+	}
+
+	private function appendExternalReference(string $uri, array $digestInfo): void
+	{
+		$referenceNode = $this->parentNode->ownerDocument->createElement('Reference');
+		$referenceNode->setAttribute('URI', $uri);
+		$this->parentNode->appendChild($referenceNode);
+
+		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestInfo['method']);
+		$digestMethodNode = $this->parentNode->ownerDocument->createElement('DigestMethod');
+		$digestMethodNode->setAttribute('Algorithm', $digestAlgorithmIdentifier);
+		$referenceNode->appendChild($digestMethodNode);
+
+		$digestValueNode = $this->parentNode->ownerDocument->createElement('DigestValue', base64_encode($digestInfo['value']));
+		$referenceNode->appendChild($digestValueNode);
 	}
 
 	private function calculateIdReference($id, string $digestMethod): void
