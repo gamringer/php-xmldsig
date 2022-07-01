@@ -1,0 +1,9 @@
+<someprofile nonce="000000">
+    <userid>12345</userid>
+    <name>John Doe</name>
+    <collection>
+        <item name="item1">999</item>
+    </collection>
+    <fooNode xml:id="foo">foo</fooNode>
+    <barNode xml:id="bar">bar</barNode>
+</someprofile>
