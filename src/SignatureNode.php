@@ -12,7 +12,7 @@ class SignatureNode
 	protected $idReferences = [];
 	protected $signaturePropertyNodes = [];
 	protected $manifestNodes = [];
-	protected $canonicalizationMethod = CanonicalizationMethod::METHOD_1_0;
+	protected $canonicalizationMethod = Canonicalizer::METHOD_1_0;
 	protected $preferredDigestMethod = null;
 
 	public function __construct(\DOMElement $node)
@@ -35,9 +35,9 @@ class SignatureNode
 		return $this->canonicalizer;
 	}
 
-	public function addIdReference(string $id): void
+	public function setCanonicalizer(Canonicalizer $canonicalizer): void
 	{
-		$this->idReferences[] = $id;
+		$this->canonicalizer = $canonicalizer;
 	}
 
 	public function setPreferredDigestMethod(string $digestMethod): void
@@ -115,14 +115,16 @@ class SignatureNode
 		}
 	}
 
-	public function addManifest(string $id): \DOMElement
+	public function addManifest(string $id): ManifestNode
 	{
 		$node = $this->node->ownerDocument->createElement('Manifest');
 		$node->setAttribute('Id', $id);
 
-		$this->manifestNodes[] = $node;
+		$manifestNode = new ManifestNode($node);
 
-		return $node;
+		$this->manifestNodes[] = $manifestNode;
+
+		return $manifestNode;
 	}
 
 	public function addSignatureProperty(string $id): \DOMElement
@@ -143,6 +145,11 @@ class SignatureNode
 				$this->referenceNodeCollection->calculateNodeReference($signaturePropertyNode, $digestMethod);
 			}
 		}
+
+		foreach ($this->manifestNodes as $manifestNode) {
+			$manifestNode->getReferenceNodeCollection()->calculateReferences($digestMethod);
+			$this->referenceNodeCollection->calculateNodeReference($manifestNode->getNode(), $digestMethod);
+		}
 	}
 
 	private function addObjectElements(): void
@@ -155,6 +162,10 @@ class SignatureNode
 			foreach ($this->signaturePropertyNodes as $signaturePropertyNode) {
 				$signaturePropertiesNode->appendChild($signaturePropertyNode);
 			}
+		}
+
+		foreach ($this->manifestNodes as $manifestNode) {
+			$this->objectNode->appendChild($manifestNode->getNode());
 		}
 
 		if ($this->objectNode->childNodes->count() == 0) {
