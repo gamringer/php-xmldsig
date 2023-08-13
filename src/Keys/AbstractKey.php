@@ -28,7 +28,7 @@ class AbstractKey
 	public function sign(SignatureNode $dsigNode): void
 	{
 		$method = $this->getSigningMethod();
-		$data = $dsigNode->getSignatureData($method);
+		$data = $dsigNode->produceSignatureData($method);
 
 		$signature = $this->signData($data);
 

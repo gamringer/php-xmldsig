@@ -13,6 +13,13 @@ class Canonicalizer
 
 	protected $canonicalizationMethod = self::METHOD_1_0;
 
+	public function __construct(?string $canonicalizationMethod = null)
+	{
+		if ($canonicalizationMethod !== null) {
+			$this->setMethod($canonicalizationMethod);
+		}
+	}
+
 	public function getMethod(): string
 	{
 		return $this->canonicalizationMethod;
@@ -48,5 +55,10 @@ class Canonicalizer
 		}
 
 		throw new \Exception('Unsupported canonicalization method');
+	}
+
+	public function transform(\DOMNode $node): string
+	{
+		return $this->canonicalize($node);
 	}
 }

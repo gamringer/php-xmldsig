@@ -18,7 +18,18 @@ class Pkcs8Key extends AbstractKey implements signsXml
 
 	protected function signData(string $data): string
 	{
-		openssl_sign($data, $signature, $this->pkey, \OPENSSL_ALGO_SHA256);
+		$hashAlgo = [
+			'http://www.w3.org/2001/04/xmldsig-more#rsa-sha224' => \OPENSSL_ALGO_SHA224,
+			'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256' => \OPENSSL_ALGO_SHA256,
+			'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384' => \OPENSSL_ALGO_SHA384,
+			'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512' => \OPENSSL_ALGO_SHA512,
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha224' => \OPENSSL_ALGO_SHA224,
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256' => \OPENSSL_ALGO_SHA256,
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384' => \OPENSSL_ALGO_SHA384,
+			'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512' => \OPENSSL_ALGO_SHA512,
+		][$this->getSigningMethod()];
+
+		openssl_sign($data, $signature, $this->pkey, $hashAlgo);
 
 		return $signature;
 	}
@@ -27,7 +38,7 @@ class Pkcs8Key extends AbstractKey implements signsXml
 	{
 		$details = openssl_pkey_get_details($this->pkey);
 		if ($details['type'] ==  \OPENSSL_KEYTYPE_RSA) {
-			return 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+			return 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
 		}
 
 		if ($details['type'] ==  \OPENSSL_KEYTYPE_EC) {

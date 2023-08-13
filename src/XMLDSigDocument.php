@@ -13,12 +13,14 @@ class XMLDSigDocument
 
 	public function addSignature(?string $id = null): SignatureNode
 	{
-		$node = $this->dom->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
+		$node = $this->dom->createElementNS(SignatureNode::URI, 'Signature');
 		if ($id !== null) {
 			$node->setAttribute('Id', $id);
 		}
 
-		return new SignatureNode($node);
+		$sn = SignatureNode::initialize($node);
+
+		return $sn;
 	}
 
 	public function getDom(): \DOMDocument
@@ -29,5 +31,29 @@ class XMLDSigDocument
 	public function getXml(): string
 	{
 		return $this->dom->saveXML();
+	}
+
+	public function getSignature(string $id): SignatureNode
+	{
+		$nodes = $this->dom->getElementsByTagNameNS(SignatureNode::URI, 'Signature');
+		foreach ($nodes as $node) {
+			if ($node->getAttribute('Id') == $id) {
+				break;
+			}
+		}
+
+		return SignatureNode::load($node);
+	}
+
+	public function getAllSignatures(): array
+	{
+		$output = [];
+
+		$nodes = $this->dom->getElementsByTagNameNS(SignatureNode::URI, 'Signature');
+		foreach ($nodes as $node) {
+			$output[] = SignatureNode::load($node);
+		}
+
+		return $output;
 	}
 }
