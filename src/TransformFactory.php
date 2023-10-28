@@ -2,6 +2,8 @@
 
 namespace gamringer\xmldsig;
 
+use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
+
 class TransformFactory
 {
 	public function produceTransform($transformNode)
@@ -19,6 +21,6 @@ class TransformFactory
 			return new Canonicalizer($algorithm);
 		}
 
-		// throw exception, unsupported transform
+		throw new UnsupportedAlgorithmException('Unsupported transform algorithm');
 	}
 }

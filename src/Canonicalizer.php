@@ -2,6 +2,8 @@
 
 namespace gamringer\xmldsig;
 
+use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
+
 class Canonicalizer
 {
 	const METHOD_1_0 = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
@@ -33,7 +35,7 @@ class Canonicalizer
 			self::METHOD_EXCLUSIVE_1_0,
 			self::METHOD_EXCLUSIVE_1_0_WITH_COMMENTS,
 		])) {
-			throw new \Exception('Unsupported canonicalization method');
+			throw new UnsupportedAlgorithmException('Unsupported canonicalization method');
 		}
 
 		$this->canonicalizationMethod = $canonicalizationMethod;
@@ -54,7 +56,7 @@ class Canonicalizer
 			return $node->C14N(true, true);
 		}
 
-		throw new \Exception('Unsupported canonicalization method');
+		throw new UnsupportedAlgorithmException('Unsupported canonicalization method');
 	}
 
 	public function transform(\DOMNode $node): string

@@ -4,6 +4,9 @@ namespace gamringer\xmldsig;
 
 use gamringer\xmldsig\Keys\X509Certificate;
 use gamringer\xmldsig\Validation\ReferenceNodeValidationTarget;
+use gamringer\xmldsig\Exceptions\NoSignatureException;
+use gamringer\xmldsig\Exceptions\ValidationRuntimeError;
+use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 
 class Validator
 {
@@ -18,7 +21,7 @@ class Validator
 	{
 		$signatureNodes = $document->getAllSignatures();
 		if (empty($signatureNodes)) {
-			// throw an exception
+			throw new NoSignatureException();
 		}
 
 		foreach ($document->getAllSignatures() as $signatureNode) {
@@ -69,7 +72,7 @@ class Validator
 
 		$r = openssl_verify($node->getSignatureData(), base64_decode($node->getSignatureValue()), $signingCert->getResource(), $sigAlg);
 		if ($r === false || $r === -1) {
-			// throw exception
+			throw new ValidationRuntimeError('Openssl unable to verify signature: ' . openssl_error_string());
 		}
 
 		return $r === 1;
@@ -79,7 +82,7 @@ class Validator
 	{
 		$sigMethodNodes = $node->getSignedInfoNode()->getElementsByTagNameNS(SignatureNode::URI, 'SignatureMethod');
 		if ($sigMethodNodes->length != 1) {
-			// throw exception
+			throw new ValidationRuntimeError('Unable to find signature algorithm');
 		}
 
 		$allowedAlgorithms = [
@@ -94,7 +97,7 @@ class Validator
 		];
 
 		if (!isset($allowedAlgorithms[$sigMethodNodes->item(0)->getAttribute('Algorithm')])) {
-			// throw exception
+			throw new UnsupportedAlgorithmException('Unsupported signature algorithm');
 		}
 
 		return $allowedAlgorithms[$sigMethodNodes->item(0)->getAttribute('Algorithm')];

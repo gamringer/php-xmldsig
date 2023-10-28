@@ -2,6 +2,8 @@
 
 namespace gamringer\xmldsig\Keys;
 
+use gamringer\xmldsig\Exceptions\KeyMaterialException;
+
 class Pkcs8Key extends AbstractKey implements signsXml
 {
 	protected $pkey;
@@ -53,6 +55,6 @@ class Pkcs8Key extends AbstractKey implements signsXml
 			}
 		}
 
-		throw new \Exception('Unknown key type');
+		throw new KeyMaterialException('Unknown key type');
 	}
 }

@@ -2,6 +2,9 @@
 
 namespace gamringer\xmldsig;
 
+use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
+use gamringer\xmldsig\Exceptions\XmlDSigParseException;
+
 class SignatureNode
 {
 	public const URI = 'http://www.w3.org/2000/09/xmldsig#';
@@ -41,7 +44,7 @@ class SignatureNode
 		$sn->node = $node;
 		$sn->setIds();
 		if ($sn->node->childNodes->count() != 0) {
-			throw new \Exception('Signature node cannot be initialized');
+			throw new XmlDSigParseException('Signature node cannot be initialized');
 		}
 		$sn->signedInfoNode = $sn->node->ownerDocument->createElement('SignedInfo');
 		$sn->node->appendChild($sn->signedInfoNode);
@@ -61,7 +64,7 @@ class SignatureNode
 
 		$signedInfoNodes = $node->getElementsByTagName('SignedInfo');
 		if ($signedInfoNodes->count() != 1) {
-			throw new \Exception('Expecting exactly 1 SignedInfo node');
+			throw new XmlDSigParseException('Expecting exactly 1 SignedInfo node');
 		}
 		$sn->signedInfoNode = $signedInfoNodes->item(0);
 
@@ -83,11 +86,11 @@ class SignatureNode
 	private static function validateNodeType(\DOMElement $node): void
 	{
 		if ($node->namespaceURI != self::URI) {
-			throw new \Exception('Node has the wrong namespace');
+			throw new XmlDSigParseException('Node has the wrong namespace');
 		}
 
 		if ($node->localName != 'Signature') {
-			throw new \Exception('Node has is wrong type');
+			throw new XmlDSigParseException('Node has is wrong type');
 		}
 	}
 
@@ -109,7 +112,7 @@ class SignatureNode
 	public function setPreferredDigestMethod(string $digestMethod): void
 	{
 		if (!in_array($digestMethod, ['sha256', 'sha384', 'sha512'])) {
-			throw new \Exception('Unsupported digest method');
+			throw new UnsupportedAlgorithmException('Unsupported digest method');
 		}
 
 		$this->preferredDigestMethod = $digestMethod;
