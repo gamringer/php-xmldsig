@@ -10,7 +10,13 @@ use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 
 class Validator
 {
-	protected TrustStore $trustStore;
+	public readonly ReferenceValidator $referenceValidator;
+	public TrustStore $trustStore;
+
+	public function __construct()
+	{
+		$this->referenceValidator = new ReferenceValidator();
+	}
 
 	public function setTrustStore(TrustStore $value): void
 	{
@@ -55,8 +61,7 @@ class Validator
 		$result = true;
 		$referenceNodes = $node->getSignedInfoNode()->getElementsByTagNameNS(SignatureNode::URI, 'Reference');
 		foreach ($referenceNodes as $referenceNode) {
-			$referenceNodeTarget = new ReferenceNodeValidationTarget($referenceNode);
-			$r = $referenceNodeTarget->validate();
+			$r = $this->referenceValidator->validate($referenceNode);
 			$result = $result && $r;
 		}
 

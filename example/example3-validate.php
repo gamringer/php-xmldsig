@@ -8,19 +8,16 @@ use gamringer\xmldsig\Canonicalizer;
 use gamringer\xmldsig\Validator;
 
 // Prepare document
-$xml = file_get_contents(getenv('XMLFILE'));
 $documentFactory = new XMLDSigDocumentFactory();
-$dsigDocument = $documentFactory->loadXml($xml);
+$dsigDocument = $documentFactory->loadFile(getenv('XMLFILE'));
 
 // Prepare Key
 $trustStore = new gamringer\xmldsig\TrustStore();
 $trustStore->addCertificateFile('example/credential/trust/g1rca1.cer');
 
-// Configure signature
-//$signatureNode = $dsigDocument->getSignature('signature1');
-
 // Configure validator
 $validator = new Validator();
-$validator->setTrustStore($trustStore);
+$validator->trustStore = $trustStore;
+$validator->referenceValidator->baseUri = 'file://' . dirname(realpath(getenv('XMLFILE')));
 
 echo $validator->validateDocument($dsigDocument) ? 'valid' : 'invalid', PHP_EOL;
