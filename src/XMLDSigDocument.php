@@ -4,12 +4,9 @@ namespace gamringer\xmldsig;
 
 class XMLDSigDocument
 {
-	protected $dom;
-
-	public function __construct(\DOMDocument $dom)
-	{
-		$this->dom = $dom;
-	}
+	public function __construct(
+		protected \DOMDocument $dom,
+	) {}
 
 	public function addSignature(?string $id = null): SignatureNode
 	{

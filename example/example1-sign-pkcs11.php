@@ -1,20 +1,17 @@
 <?php
 
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/example-common.php';
 
 use gamringer\xmldsig\XMLDSigDocumentFactory;
 use gamringer\xmldsig\Canonicalizer;
+use gamringer\xmldsig\CanonicalizationMethod;
 
 // Prepare document
 $xml = file_get_contents(getenv('XMLFILE'));
 
 // Prepare Key
-$p11Module = new \Pkcs11\Module(getenv('MODULEPATH'));
-$p11Session = $p11Module->openSession(getenv('SLOTID'), \Pkcs11\CKF_RW_SESSION);
-
-$p11Session->login(Pkcs11\CKU_USER, getenv('PIN'));
-$key = gamringer\xmldsig\Keys\Pkcs11Key::fromUri($p11Session, 'pkcs11:object='.getenv('KEYLABEL').';type=private');
-
+$key = getHardwareKey();
 $key->setCertificate(
     file_get_contents(getenv('CERTFILE')),
     [
@@ -30,13 +27,21 @@ $dsigDocument = $signer->loadXml($xml);
 $signatureNode = $dsigDocument->addSignature('signature1');
 $signatureNode->getReferenceNodeCollection()->addIdReference('foo');
 $signatureNode->getReferenceNodeCollection()->addIdReference('bar');
-$signatureNode->getReferenceNodeCollection()->addExternalReference(__FILE__, 'sha256', hash('sha256', file_get_contents(__FILE__), true));
-$signatureNode->getCanonicalizer()->setMethod(Canonicalizer::METHOD_1_0);
+$signatureNode->getReferenceNodeCollection()->addExternalReference(
+    __FILE__,
+    'sha256',
+    hash('sha256', file_get_contents(__FILE__), true)
+);
+$signatureNode->getCanonicalizer()->setMethod(CanonicalizationMethod::METHOD_1_0);
 $signatureNode->setPreferredDigestMethod('sha384');
 
 $manifestNode = $signatureNode->addManifest('some-manifest-id');
 $manifestNode->getReferenceNodeCollection()->addIdReference('foo');
-$manifestNode->getReferenceNodeCollection()->addExternalReference(__FILE__, 'sha256', hash('sha256', file_get_contents(__FILE__), true));
+$manifestNode->getReferenceNodeCollection()->addExternalReference(
+    __FILE__,
+    'sha256',
+    hash('sha256', file_get_contents(__FILE__), true)
+);
 
 $signaturePropertyNode = $signatureNode->addSignatureProperty('some-signature-property-id');
 $signaturePropertyNode->appendChild($dsigDocument->getDom()->createElement('SignatureTime', date('c')));
@@ -44,4 +49,6 @@ $signaturePropertyNode->appendChild($dsigDocument->getDom()->createElement('Sign
 // Sign
 $key->sign($signatureNode);
 
+$dsigDocument->getDom()->formatOutput = true;
 echo $dsigDocument->getXml();
+

@@ -4,21 +4,22 @@ namespace gamringer\xmldsig;
 
 use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 use gamringer\xmldsig\Exceptions\XmlDSigParseException;
+use DOMElement;
 
 class SignatureNode
 {
 	public const URI = 'http://www.w3.org/2000/09/xmldsig#';
 
-	protected $node;
-	protected $signedInfoNode;
-	protected $referenceNodeCollection;
-	protected $canonicalizer;
-	protected $objectNode;
-	protected $idReferences = [];
-	protected $signaturePropertyNodes = [];
-	protected $manifestNodes = [];
-	protected $canonicalizationMethod = Canonicalizer::METHOD_1_0;
-	protected $preferredDigestMethod = null;
+	protected DOMElement $node;
+	protected DOMElement $signedInfoNode;
+	protected ReferenceNodeCollection $referenceNodeCollection;
+	protected Canonicalizer $canonicalizer;
+	protected DOMElement $objectNode;
+	protected array $idReferences = [];
+	protected array $signaturePropertyNodes = [];
+	protected array $manifestNodes = [];
+	protected CanonicalizationMethod $canonicalizationMethod = CanonicalizationMethod::METHOD_1_0;
+	protected ?string $preferredDigestMethod = null;
 
 	private function __construct()
 	{
@@ -139,7 +140,7 @@ class SignatureNode
 	public function produceSignatureData(string $signatureMethod): string
 	{
 		$canonicalizationMethodNode = $this->node->ownerDocument->createElement('CanonicalizationMethod');
-		$canonicalizationMethodNode->setAttribute('Algorithm', $this->canonicalizationMethod);
+		$canonicalizationMethodNode->setAttribute('Algorithm', $this->canonicalizationMethod->value);
 		$this->signedInfoNode->appendChild($canonicalizationMethodNode);
 
 		$signatureMethodNode = $this->node->ownerDocument->createElement('SignatureMethod');

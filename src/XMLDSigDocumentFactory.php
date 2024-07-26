@@ -20,7 +20,6 @@ class XMLDSigDocumentFactory
 
 	public function loadDom(\DOMDocument $dom): XMLDSigDocument
 	{
-		$dom->preserveWhiteSpace = true;
 		return new XMLDSigDocument($dom);
 	}
 }

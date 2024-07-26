@@ -4,7 +4,7 @@ namespace gamringer\xmldsig;
 
 class TrustStore
 {
-	protected $certs = [];
+	protected array $certs = [];
 
 	public function addCertificate(string $certificate): void
 	{

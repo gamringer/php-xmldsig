@@ -10,7 +10,7 @@ use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 
 class Validator
 {
-	protected $trustStore;
+	protected TrustStore $trustStore;
 
 	public function setTrustStore(TrustStore $value): void
 	{

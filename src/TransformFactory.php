@@ -3,24 +3,20 @@
 namespace gamringer\xmldsig;
 
 use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
+use DOMElement;
 
 class TransformFactory
 {
-	public function produceTransform($transformNode)
+	public function produceTransform(DOMElement $transformNode): Canonicalizer
 	{
 		$algorithm = $transformNode->getAttribute('Algorithm');
 
-		if (in_array($algorithm, [
-			Canonicalizer::METHOD_1_0,
-			Canonicalizer::METHOD_1_0_WITH_COMMENTS,
-			Canonicalizer::METHOD_1_1,
-			Canonicalizer::METHOD_1_1_WITH_COMMENTS,
-			Canonicalizer::METHOD_EXCLUSIVE_1_0,
-			Canonicalizer::METHOD_EXCLUSIVE_1_0_WITH_COMMENTS,
-		])) {
-			return new Canonicalizer($algorithm);
+		$method = CanonicalizationMethod::tryFrom($algorithm);
+
+		if ($method === null) {
+			throw new UnsupportedAlgorithmException('Unsupported transform algorithm');
 		}
 
-		throw new UnsupportedAlgorithmException('Unsupported transform algorithm');
+		return new Canonicalizer($method);
 	}
 }

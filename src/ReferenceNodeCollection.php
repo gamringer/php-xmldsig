@@ -4,15 +4,13 @@ namespace gamringer\xmldsig;
 
 class ReferenceNodeCollection
 {
-	protected $parentNode;
-	protected $idReferences = [];
-	protected $externalReferences = [];
+	protected array $idReferences = [];
+	protected array $externalReferences = [];
 
-	public function __construct(\DOMElement $parentNode, Canonicalizer $canonicalizer)
-	{
-		$this->parentNode = $parentNode;
-		$this->canonicalizer = $canonicalizer;
-	}
+	public function __construct(
+		protected \DOMElement $parentNode,
+		protected Canonicalizer $canonicalizer,
+	) {}
 
 	public function addIdReference(string $id): void
 	{
@@ -80,7 +78,7 @@ class ReferenceNodeCollection
 		$referenceNode->appendChild($transformsNode);
 
 		$transformNode = $this->parentNode->ownerDocument->createElement('Transform');
-		$transformNode->setAttribute('Algorithm', $this->canonicalizer->getMethod());
+		$transformNode->setAttribute('Algorithm', $this->canonicalizer->getMethodId());
 		$transformsNode->appendChild($transformNode);
 
 		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
@@ -107,7 +105,7 @@ class ReferenceNodeCollection
 		$referenceNode->appendChild($transformsNode);
 
 		$transformNode = $this->parentNode->ownerDocument->createElement('Transform');
-		$transformNode->setAttribute('Algorithm', $this->canonicalizer->getMethod());
+		$transformNode->setAttribute('Algorithm', $this->canonicalizer->getMethodId());
 		$transformsNode->appendChild($transformNode);
 
 		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);

@@ -4,14 +4,12 @@ namespace gamringer\xmldsig;
 
 class ManifestNode
 {
-	protected $node;
-	protected $canonicalizer;
-	protected $referenceNodeCollection;
+	protected Canonicalizer $canonicalizer;
+	protected ReferenceNodeCollection $referenceNodeCollection;
 
-	public function __construct(\DOMElement $node)
-	{
-		$this->node = $node;
-
+	public function __construct(
+		protected \DOMElement $node,
+	) {
 		$this->canonicalizer = new Canonicalizer();
 		$this->referenceNodeCollection = new ReferenceNodeCollection($this->node, $this->canonicalizer);
 	}
