@@ -17,12 +17,17 @@ class OpenSSLCertificateValidator implements CertificateValidator
 
 	public function validate(X509Certificate $certificate): bool
 	{
+		$args = $this->extraArgs;
+
 		$trustList = '';
 		foreach ($this->trustStore->getCertificates() as $trustedCertificate) {
 			$trustList .= $trustedCertificate . PHP_EOL . PHP_EOL;
 		}
 		$trustListFile = tempnam(sys_get_temp_dir(), 'trustlist');
-		file_put_contents($trustListFile, $trustList);
+		if (!empty($trustList)) {
+			file_put_contents($trustListFile, $trustList);
+			$args[] = '-CAfile ' . $trustListFile;
+		}
 
 		$i = $certificate;
 		$chainList = '';
@@ -31,15 +36,13 @@ class OpenSSLCertificateValidator implements CertificateValidator
 			$i = $issuer;
 		}
 		$chainListFile = tempnam(sys_get_temp_dir(), 'chainlist');
-		file_put_contents($chainListFile, $chainList);
+		if (!empty($chainList)) {
+			file_put_contents($chainListFile, $chainList);
+			$args[] = '-untrusted ' . $chainListFile;
+		}
 
 		$certificateFile = tempnam(sys_get_temp_dir(), 'certificate');
 		file_put_contents($certificateFile, $certificate->getEncoded());
-
-		$args = array_merge($this->extraArgs, [
-			'-CAfile ' . $trustListFile,
-			'-untrusted ' . $chainListFile,
-		]);
 
 		$cmd = 'openssl verify ' . implode(' ', $args) . ' ' . $certificateFile;
 		echo $cmd, PHP_EOL;

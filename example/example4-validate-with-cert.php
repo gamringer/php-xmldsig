@@ -13,8 +13,15 @@ use gamringer\xmldsig\Validation\Validator;
 $documentFactory = new XMLDSigDocumentFactory();
 $dsigDocument = $documentFactory->loadFile(getenv('XMLFILE'));
 
+// Prepare Key
+$trustStore = new TrustStore();
+$trustStore->addCertificateFile('example/credential/trust/g1rca1.cer');
+
+$certificateValidator = new OpenSSLCertificateValidator($trustStore);
+
 // Configure validator
 $validator = new Validator();
+$validator->certificateValidator = $certificateValidator;
 $validator->referenceValidator->baseUri = 'file://' . dirname(realpath(getenv('XMLFILE')));
 
 echo $validator->validateDocument($dsigDocument) ? 'valid' : 'invalid', PHP_EOL;
