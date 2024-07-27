@@ -45,7 +45,6 @@ class OpenSSLCertificateValidator implements CertificateValidator
 		file_put_contents($certificateFile, $certificate->getEncoded());
 
 		$cmd = 'openssl verify ' . implode(' ', $args) . ' ' . $certificateFile;
-		echo $cmd, PHP_EOL;
 		if (!exec($cmd, $output, $resultCode)) {
 			// throw
 		}
