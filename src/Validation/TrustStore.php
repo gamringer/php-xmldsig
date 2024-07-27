@@ -1,6 +1,6 @@
 <?php
 
-namespace gamringer\xmldsig;
+namespace gamringer\xmldsig\Validation;
 
 class TrustStore
 {
@@ -14,5 +14,10 @@ class TrustStore
 	public function addCertificateFile(string $path): void
 	{
 		$this->addCertificate(file_get_contents($path));
+	}
+
+	public function getCertificates(): array
+	{
+		return $this->certs;
 	}
 }

@@ -1,7 +1,9 @@
 <?php
 
-namespace gamringer\xmldsig;
+namespace gamringer\xmldsig\Validation;
 
+use gamringer\xmldsig\XMLDSigDocument;
+use gamringer\xmldsig\SignatureNode;
 use gamringer\xmldsig\Keys\X509Certificate;
 use gamringer\xmldsig\Validation\ReferenceNodeValidationTarget;
 use gamringer\xmldsig\Exceptions\NoSignatureException;
@@ -11,16 +13,12 @@ use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 class Validator
 {
 	public readonly ReferenceValidator $referenceValidator;
-	public TrustStore $trustStore;
+	public CertificateValidator $certificateValidator;
 
 	public function __construct()
 	{
+		$this->certificateValidator = new NullCertificateValidator();
 		$this->referenceValidator = new ReferenceValidator();
-	}
-
-	public function setTrustStore(TrustStore $value): void
-	{
-		$this->trustStore = $value;
 	}
 
 	public function validateDocument(XMLDSigDocument $document): bool
@@ -110,7 +108,9 @@ class Validator
 
 	private function validateCertificate(SignatureNode $node): bool
 	{
-		return true;
+		$certificate = $this->getSigningCert($node);
+
+		return $this->certificateValidator->validate($certificate);
 	}
 
 	private function getSigningCert(SignatureNode $node): ?X509Certificate
@@ -119,7 +119,9 @@ class Validator
 		$certs = [];
 		$eeCert = null;
 		foreach ($x509DataNodeList as $x509DataNode) {
-			$certificate = new X509Certificate("-----BEGIN CERTIFICATE-----\n" . $x509DataNode->nodeValue . "\n-----END CERTIFICATE-----");
+			$b64 = chunk_split(base64_encode(base64_decode($x509DataNode->nodeValue)), 64);
+			$certificate = new X509Certificate("-----BEGIN CERTIFICATE-----\r\n" . $b64 . "-----END CERTIFICATE-----");
+
 			$parsed = $certificate->getParsed();
 			if (strpos($parsed['extensions']['basicConstraints'], 'CA:FALSE') !== false) {
 				$eeCert = $certificate;

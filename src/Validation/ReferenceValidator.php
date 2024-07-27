@@ -1,7 +1,9 @@
 <?php
 
-namespace gamringer\xmldsig;
+namespace gamringer\xmldsig\Validation;
 
+use gamringer\xmldsig\SignatureNode;
+use gamringer\xmldsig\TransformFactory;
 use gamringer\xmldsig\Exceptions\ValidationRuntimeError;
 use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 use gamringer\xmldsig\ProtocolHandlers\FileProtocolHandler;

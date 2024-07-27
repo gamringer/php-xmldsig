@@ -8,9 +8,9 @@ class X509Certificate
 	protected $issuer;
 	protected $parsed;
 
-	public function __construct(string $encoded)
+	public function __construct(protected string $encoded)
 	{
-		$this->resource = openssl_x509_read($encoded);
+		$this->resource = openssl_x509_read($this->encoded);
 		$this->parsed = openssl_x509_parse($this->resource);
 	}
 
@@ -24,7 +24,7 @@ class X509Certificate
 		$this->issuer = $issuer;
 	}
 
-	public function getIssuer(): self
+	public function getIssuer(): ?self
 	{
 		return $this->issuer;
 	}
@@ -32,6 +32,11 @@ class X509Certificate
 	public function getParsed(): array
 	{
 		return $this->parsed;
+	}
+
+	public function getEncoded(): string
+	{
+		return $this->encoded;
 	}
 
 	public function getResource(): \OpenSSLCertificate
