@@ -46,7 +46,7 @@ class OpenSSLCertificateValidator implements CertificateValidator
 
 		$cmd = 'openssl verify ' . implode(' ', $args) . ' ' . $certificateFile;
 		if (!exec($cmd, $output, $resultCode)) {
-			// throw
+			throw new ValidationRuntimeError('OpenSSL returned an error validating the certificate');
 		}
 
 		unlink($trustListFile);

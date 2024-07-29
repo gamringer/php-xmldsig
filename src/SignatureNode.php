@@ -2,6 +2,7 @@
 
 namespace gamringer\xmldsig;
 
+use gamringer\xmldsig\Exceptions\SignatureStructureException;
 use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 use gamringer\xmldsig\Exceptions\XmlDSigParseException;
 use DOMElement;
@@ -202,7 +203,7 @@ class SignatureNode
 		}
 
 		if ($nodes->count() > 1) {
-			// throw exception
+			throw new SignatureStructureException('More than 1 SignatureValue node found');
 		}
 
 		return $nodes->item(0)->nodeValue;

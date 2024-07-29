@@ -6,6 +6,7 @@ use gamringer\xmldsig\SignatureNode;
 use gamringer\xmldsig\TransformFactory;
 use gamringer\xmldsig\Exceptions\ValidationRuntimeError;
 use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
+use gamringer\xmldsig\Exceptions\SignatureStructureException;
 use gamringer\xmldsig\ProtocolHandlers\FileProtocolHandler;
 use gamringer\xmldsig\ProtocolHandlers\ProtocolHandler;
 
@@ -23,7 +24,7 @@ class ReferenceValidator
 	public function setProtocolHandler(string $protocol, ProtocolHandler $handler): void
 	{
 		if (!preg_match('/^[a-z][a-z0-9+-.]*$/i', $protocol)) {
-			// throw
+			throw new ValidationRuntimeError('Invalid protocol name');
 		}
 
 		$this->protocolHandlers[$protocol] = $handler;
@@ -35,10 +36,10 @@ class ReferenceValidator
 
 		$digestValueNodes = $element->getElementsByTagNameNS(SignatureNode::URI, 'DigestValue');
 		if ($digestValueNodes->count() == 0) {
-			// throw exception
+			throw new SignatureStructureException('No DigestValue node found');
 		}
 		if ($digestValueNodes->count() > 1) {
-			// throw exception
+			throw new SignatureStructureException('More than one DigestValue node found');
 		}
 
 		if ($uri[0] == '#') {
@@ -68,8 +69,8 @@ class ReferenceValidator
 	private function gethashMethod($element): string
 	{
 		$digestMethodNodes = $element->getElementsByTagNameNS(SignatureNode::URI, 'DigestMethod');
-		if ($digestMethodNodes->length != 0) {
-			// throw exception
+		if ($digestMethodNodes->length != 1) {
+			throw new SignatureStructureException('No DigestMethod node found');
 		}
 
 		$digestMethodNode = $digestMethodNodes->item(0);
@@ -97,7 +98,7 @@ class ReferenceValidator
 		$requestedAlgorithm = $digestMethodNode->getAttribute('Algorithm');
 
 		if (!isset($allowedAlgorithms[$requestedAlgorithm])) {
-			// throw exception
+			throw new UnsupportedAlgorithmException('Algorithm not supported');
 		}
 
 		return $allowedAlgorithms[$requestedAlgorithm];
@@ -108,7 +109,7 @@ class ReferenceValidator
 		$uriReferenceParts = parse_url($uri);
 
 		if (!isset($this->protocolHandlers[$uriReferenceParts['scheme']])) {
-			// throw
+			throw new ValidationRuntimeError('Unhandled protocol');
 		}
 
 		$hash = $this->protocolHandlers[$uriReferenceParts['scheme']]->getHash($uri, $this->gethashMethod($element));
@@ -124,12 +125,12 @@ class ReferenceValidator
 		}
 
 		if ($this->baseUri === null) {
-			throw new \Exception('Base URI is not defined');
+			throw new ValidationRuntimeError('Base URI is not defined');
 		}
 
 		// Check if the scheme-specific part of the reference URI is opaque
 		if (preg_match('/^[a-z][a-z0-9+-.]*:[a-z0-9\-_.!~*\'();?:@&=+$,]/i', $this->baseUri)) {
-			throw new \Exception('Base URI scheme does not allow relative URI references');
+			throw new ValidationRuntimeError('Base URI scheme does not allow relative URI references');
 		}
 
 		$authority = $this->getAuthority($this->baseUri);
