@@ -92,7 +92,7 @@ class ReferenceNodeCollection
 		$referenceNode->appendChild($digestValueNode);
 	}
 
-	public function calculateNodeReference(\DOMElement $node, string $digestMethod): void
+	public function calculateNodeReference(\DOMElement $node, string $digestMethod): \DOMElement
 	{
 		$id = $node->getAttribute('Id');
 		$digestData = $this->canonicalizer->canonicalize($node);
@@ -117,6 +117,8 @@ class ReferenceNodeCollection
 
 		$digestValueNode = $this->parentNode->ownerDocument->createElement('DigestValue', base64_encode($digestValue));
 		$referenceNode->appendChild($digestValueNode);
+
+		return $referenceNode;
 	}
 
 	private function calculateEmptyReference(string $digestMethod): void

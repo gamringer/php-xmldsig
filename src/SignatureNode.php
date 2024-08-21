@@ -10,6 +10,8 @@ use DOMElement;
 class SignatureNode
 {
 	public const URI = 'http://www.w3.org/2000/09/xmldsig#';
+	public const URI_TYPE_SIGNATURE_PROPERTY = 'http://www.w3.org/2000/09/xmldsig#SignatureProperties';
+	public const URI_TYPE_MANIFEST = 'http://www.w3.org/2000/09/xmldsig#Manifest';
 
 	protected DOMElement $node;
 	protected DOMElement $signedInfoNode;
@@ -236,13 +238,15 @@ class SignatureNode
 	{
 		if (!empty($this->signaturePropertyNodes)) {
 			foreach ($this->signaturePropertyNodes as $signaturePropertyNode) {
-				$this->referenceNodeCollection->calculateNodeReference($signaturePropertyNode, $digestMethod);
+				$referenceNode = $this->referenceNodeCollection->calculateNodeReference($signaturePropertyNode, $digestMethod);
+				$referenceNode->setAttribute('Type', self::URI_TYPE_SIGNATURE_PROPERTY);
 			}
 		}
 
 		foreach ($this->manifestNodes as $manifestNode) {
 			$manifestNode->getReferenceNodeCollection()->calculateReferences($digestMethod);
-			$this->referenceNodeCollection->calculateNodeReference($manifestNode->getNode(), $digestMethod);
+			$referenceNode = $this->referenceNodeCollection->calculateNodeReference($manifestNode->getNode(), $digestMethod);
+			$referenceNode->setAttribute('Type', self::URI_TYPE_MANIFEST);
 		}
 	}
 
