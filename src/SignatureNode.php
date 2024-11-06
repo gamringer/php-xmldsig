@@ -5,6 +5,7 @@ namespace gamringer\xmldsig;
 use gamringer\xmldsig\Exceptions\SignatureStructureException;
 use gamringer\xmldsig\Exceptions\UnsupportedAlgorithmException;
 use gamringer\xmldsig\Exceptions\XmlDSigParseException;
+use gamringer\xmldsig\XAdES\QualifyingPropertiesNode;
 use DOMElement;
 
 class SignatureNode
@@ -21,6 +22,7 @@ class SignatureNode
 	protected array $idReferences = [];
 	protected array $signaturePropertyNodes = [];
 	protected array $manifestNodes = [];
+	protected array $qualifyingPropertiesNodes = [];
 	protected CanonicalizationMethod $canonicalizationMethod = CanonicalizationMethod::METHOD_1_0;
 	protected ?string $preferredDigestMethod = null;
 
@@ -81,8 +83,12 @@ class SignatureNode
 	{
 		$xpath = new \DOMXPath($this->node->ownerDocument);
 		$xpath->registerNamespace('ds', self::URI);
+		$xpath->registerNamespace('xades', QualifyingPropertiesNode::URI);
 
 		foreach ($xpath->query('//ds:*[@Id]') as $node) {
+			$node->setIdAttribute('Id', true);
+		}
+		foreach ($xpath->query('//xades:*[@Id]') as $node) {
 			$node->setIdAttribute('Id', true);
 		}
 	}
@@ -234,6 +240,15 @@ class SignatureNode
 		return $node;
 	}
 
+	public function addQualifyingProperties(): QualifyingPropertiesNode
+	{
+		$node = new QualifyingPropertiesNode($this);
+
+		$this->qualifyingPropertiesNodes[] = $node;
+
+		return $node;
+	}
+
 	private function addObjectReferences(string $digestMethod): void
 	{
 		if (!empty($this->signaturePropertyNodes)) {
@@ -264,6 +279,10 @@ class SignatureNode
 
 		foreach ($this->manifestNodes as $manifestNode) {
 			$this->objectNode->appendChild($manifestNode->getNode());
+		}
+
+		foreach ($this->qualifyingPropertiesNodes as $qualifyingPropertiesNode) {
+			$this->objectNode->appendChild($qualifyingPropertiesNode->getNode());
 		}
 
 		if ($this->objectNode->childNodes->count() == 0) {
