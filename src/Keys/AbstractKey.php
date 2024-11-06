@@ -18,6 +18,11 @@ class AbstractKey
 		}
 	}
 
+	public function getCertificate(): string
+	{
+		return $this->cert;
+	}
+
 	private function stripPem(string $pem): string
 	{
 		$begin = strpos($pem, '-----BEGIN CERTIFICATE-----') + 28;
