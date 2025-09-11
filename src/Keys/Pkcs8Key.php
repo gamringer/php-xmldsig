@@ -44,13 +44,13 @@ class Pkcs8Key extends AbstractKey implements signsXml
 		}
 
 		if ($details['type'] ==  \OPENSSL_KEYTYPE_EC) {
-			if ($details['curve_name'] ==  'prime256v1 ') {
+			if ($details['ec']['curve_name'] ==  'prime256v1') {
 				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
 			}
-			if ($details['curve_name'] ==  'secp384r1 ') {
+			if ($details['ec']['curve_name'] ==  'secp384r1') {
 				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384';
 			}
-			if ($details['curve_name'] ==  'secp521r1 ') {
+			if ($details['ec']['curve_name'] ==  'secp521r1') {
 				return 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512';
 			}
 		}

@@ -139,7 +139,7 @@ class ReferenceNodeCollection
 		$transformsNode->appendChild($transformNode);
 
 		$transformNode = $this->parentNode->ownerDocument->createElement('Transform');
-		$transformNode->setAttribute('Algorithm', $this->canonicalizer->getMethod());
+		$transformNode->setAttribute('Algorithm', $this->canonicalizer->getMethodId());
 		$transformsNode->appendChild($transformNode);
 
 		$digestAlgorithmIdentifier = $this->getDigestAlgorithmIdentifier($digestMethod);
